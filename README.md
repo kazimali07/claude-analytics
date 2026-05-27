@@ -11,11 +11,40 @@ uv run claude-usage --help
 # One-time: create the data dir
 mkdir -p ~/.claude-usage
 
-# Boot the tmux session manually
+# Boot the tmux session
 ./bin/claude-usage-up
 ```
 
-Detach with `Ctrl-B D`. Reattach anytime: `tmux a -t claude-dash`.
+## Daily use
+
+**Detach** (leave the session running in the background, return to your shell):
+
+```
+Ctrl-B  then  D
+```
+
+**Reattach** to the running session:
+
+```bash
+tmux a -t claude-dash
+```
+
+**Re-run from scratch** — first check whether a session is still alive:
+
+```bash
+tmux ls
+```
+
+- If `claude-dash` is listed → `tmux a -t claude-dash` reattaches you.
+- If nothing's listed (or `no server running` error) → `./bin/claude-usage-up` boots a fresh session.
+
+The `up` script is idempotent: if `claude-dash` already exists it just attaches you; otherwise it creates the four panes.
+
+**Stop everything**:
+
+```bash
+./bin/claude-usage-down
+```
 
 ## Auto-start at login (optional)
 
