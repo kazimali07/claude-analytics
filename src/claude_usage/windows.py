@@ -17,22 +17,26 @@ def current_5h_window(
 ) -> Optional[tuple[datetime, datetime]]:
     """Return (start, end) of the active 5-hour window, or None if no window is active.
 
-    The window starts at the first message of the contiguous tail — the earliest
-    message such that every subsequent message lies within 5 hours of its predecessor.
+    Models Anthropic's session-window behavior: a window starts at the first
+    message after the previous window expired (or the first message ever), and
+    expires exactly 5 hours later — regardless of how many messages were sent.
+    The next message after expiry begins a new window.
     """
     sorted_ts = sorted(_parse(t) for t in timestamps)
     if not sorted_ts:
         return None
-    if now - sorted_ts[-1] > WINDOW:
-        return None
 
-    contiguous_start = sorted_ts[-1]
-    for t in reversed(sorted_ts[:-1]):
-        if contiguous_start - t <= WINDOW:
-            contiguous_start = t
-        else:
-            break
-    return contiguous_start, contiguous_start + WINDOW
+    # Forward-walk: every message that lands after the previous window's end
+    # starts a new window.
+    window_start = sorted_ts[0]
+    for t in sorted_ts[1:]:
+        if t >= window_start + WINDOW:
+            window_start = t
+
+    window_end = window_start + WINDOW
+    if now >= window_end:
+        return None   # most recent window has expired
+    return window_start, window_end
 
 
 def msgs_in_window(

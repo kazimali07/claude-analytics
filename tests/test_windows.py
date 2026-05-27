@@ -44,6 +44,36 @@ def test_window_anchors_on_first_message_after_gap():
     assert (now - start).total_seconds() == 20 * 60
 
 
+def test_continuous_activity_starts_window_after_each_5h_lapse():
+    # User active for many hours — should NOT roll into one giant window.
+    # Each msg landing after the previous window's end starts a fresh window.
+    now = datetime(2026, 5, 27, 17, 0, tzinfo=UTC)
+    msgs = [
+        ts(12 * 60, now=now),    # T-12h (05:00) starts W1, ends 10:00
+        ts(10 * 60, now=now),    # T-10h (07:00) — inside W1
+        ts(6 * 60,  now=now),    # T-6h  (11:00) — after W1 expired, starts W2 (ends 16:00)
+        ts(2 * 60,  now=now),    # T-2h  (15:00) — inside W2
+        ts(30,      now=now),    # T-30m (16:30) — after W2 expired, starts W3 (ends 21:30)
+    ]
+    start, end = current_5h_window(msgs, now=now)
+    # Current window is W3, started 30 minutes ago at 16:30.
+    assert (now - start).total_seconds() == 30 * 60
+
+
+def test_window_expired_returns_none():
+    # Most recent msg is 1 minute ago, but its window started 5h 1min ago,
+    # so the window has already expired. Next msg would start a fresh one.
+    now = datetime(2026, 5, 27, 17, 0, tzinfo=UTC)
+    msgs = [
+        ts(5 * 60 + 1, now=now),    # T-5h1m: started a window that ends at T-1m
+        ts(1, now=now),             # T-1m: this is OUTSIDE the prior window;
+                                     # it actually starts a fresh window that is still active
+    ]
+    start, end = current_5h_window(msgs, now=now)
+    # The current window started 1 minute ago, not 5h1m ago.
+    assert (now - start).total_seconds() == 60
+
+
 def test_msgs_in_window_counts_inclusive():
     now = datetime(2026, 5, 27, 17, 0, tzinfo=UTC)
     msgs = [ts(20, now=now), ts(10, now=now), ts(0, now=now)]
