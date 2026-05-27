@@ -12,32 +12,53 @@ for arg in "$@"; do
     esac
 done
 
-run() {
-    if [[ $DRY -eq 1 ]]; then
-        echo "$*"
-    else
-        eval "$*"
-    fi
-}
+REPO_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 
-if [[ $DRY -eq 0 ]] && tmux has-session -t "$SESSION" 2>/dev/null; then
+# Per-pane command. The `while :; do ... sleep N; done` wrapper is the respawn loop.
+GAUGE_CMD="cd \"$REPO_DIR\" && while :; do uv run claude-usage tui gauge;    sleep 1; done"
+SESS_CMD="cd \"$REPO_DIR\" && while :; do uv run claude-usage tui sessions; sleep 1; done"
+DAEMON_CMD="cd \"$REPO_DIR\" && while :; do uv run claude-usage daemon;      sleep 2; done"
+MCP_CMD="cd \"$REPO_DIR\" && while :; do uv run claude-usage mcp;            sleep 2; done"
+
+if [[ $DRY -eq 1 ]]; then
+    cat <<EOF
+tmux new-session -d -s $SESSION -n main -c "$REPO_DIR"
+tmux send-keys '$GAUGE_CMD' Enter
+tmux split-window -v -p 60 -c "$REPO_DIR"
+tmux send-keys '$SESS_CMD' Enter
+tmux split-window -v -p 50 -c "$REPO_DIR"
+tmux send-keys '$DAEMON_CMD' Enter
+tmux split-window -h -c "$REPO_DIR"
+tmux send-keys '$MCP_CMD' Enter
+EOF
+    exit 0
+fi
+
+if tmux has-session -t "$SESSION" 2>/dev/null; then
     if [[ $NO_ATTACH -eq 1 ]]; then
         exit 0
     fi
     exec tmux attach -t "$SESSION"
 fi
 
-REPO_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+# Create the session; the first pane is the gauge.
+# Capture each new pane's stable %ID so we can target them deterministically —
+# indices shift after each split, which is what bit us before.
+gauge_pane=$(tmux new-session -d -s "$SESSION" -n main -c "$REPO_DIR" -P -F '#{pane_id}')
+tmux send-keys -t "$gauge_pane" "$GAUGE_CMD" Enter
 
-run "tmux new-session -d -s $SESSION -n main -c \"$REPO_DIR\""
-run "tmux send-keys -t $SESSION:0.0 'cd \"$REPO_DIR\" && while :; do uv run claude-usage tui gauge;    sleep 1; done' Enter"
-run "tmux split-window -t $SESSION:0   -v -p 40 -c \"$REPO_DIR\""
-run "tmux send-keys -t $SESSION:0.1 'cd \"$REPO_DIR\" && while :; do uv run claude-usage tui sessions; sleep 1; done' Enter"
-run "tmux split-window -t $SESSION:0.1 -h -c \"$REPO_DIR\""
-run "tmux send-keys -t $SESSION:0.2 'cd \"$REPO_DIR\" && while :; do uv run claude-usage daemon;       sleep 2; done' Enter"
-run "tmux split-window -t $SESSION:0.1 -h -c \"$REPO_DIR\""
-run "tmux send-keys -t $SESSION:0.3 'cd \"$REPO_DIR\" && while :; do uv run claude-usage mcp;          sleep 2; done' Enter"
+# Split below the gauge → sessions pane (bottom 60%, gauge keeps top 40%)
+sessions_pane=$(tmux split-window -t "$gauge_pane" -v -p 60 -c "$REPO_DIR" -P -F '#{pane_id}')
+tmux send-keys -t "$sessions_pane" "$SESS_CMD" Enter
 
-if [[ $DRY -eq 0 && $NO_ATTACH -eq 0 ]]; then
+# Split below sessions → ingest pane (bottom half of the lower region)
+daemon_pane=$(tmux split-window -t "$sessions_pane" -v -p 50 -c "$REPO_DIR" -P -F '#{pane_id}')
+tmux send-keys -t "$daemon_pane" "$DAEMON_CMD" Enter
+
+# Split ingest horizontally → MCP pane on the right
+mcp_pane=$(tmux split-window -t "$daemon_pane" -h -c "$REPO_DIR" -P -F '#{pane_id}')
+tmux send-keys -t "$mcp_pane" "$MCP_CMD" Enter
+
+if [[ $NO_ATTACH -eq 0 ]]; then
     exec tmux attach -t "$SESSION"
 fi
