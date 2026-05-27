@@ -27,14 +27,16 @@ if [[ $DRY -eq 0 ]] && tmux has-session -t "$SESSION" 2>/dev/null; then
     exec tmux attach -t "$SESSION"
 fi
 
-run "tmux new-session -d -s $SESSION -n main"
-run "tmux send-keys -t $SESSION:0.0 'while :; do claude-usage tui gauge;    sleep 1; done' Enter"
-run "tmux split-window -t $SESSION:0   -v -p 40"
-run "tmux send-keys -t $SESSION:0.1 'while :; do claude-usage tui sessions; sleep 1; done' Enter"
-run "tmux split-window -t $SESSION:0.1 -h"
-run "tmux send-keys -t $SESSION:0.2 'while :; do claude-usage daemon;       sleep 2; done' Enter"
-run "tmux split-window -t $SESSION:0.1 -h"
-run "tmux send-keys -t $SESSION:0.3 'while :; do claude-usage mcp;          sleep 2; done' Enter"
+REPO_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+
+run "tmux new-session -d -s $SESSION -n main -c \"$REPO_DIR\""
+run "tmux send-keys -t $SESSION:0.0 'cd \"$REPO_DIR\" && while :; do uv run claude-usage tui gauge;    sleep 1; done' Enter"
+run "tmux split-window -t $SESSION:0   -v -p 40 -c \"$REPO_DIR\""
+run "tmux send-keys -t $SESSION:0.1 'cd \"$REPO_DIR\" && while :; do uv run claude-usage tui sessions; sleep 1; done' Enter"
+run "tmux split-window -t $SESSION:0.1 -h -c \"$REPO_DIR\""
+run "tmux send-keys -t $SESSION:0.2 'cd \"$REPO_DIR\" && while :; do uv run claude-usage daemon;       sleep 2; done' Enter"
+run "tmux split-window -t $SESSION:0.1 -h -c \"$REPO_DIR\""
+run "tmux send-keys -t $SESSION:0.3 'cd \"$REPO_DIR\" && while :; do uv run claude-usage mcp;          sleep 2; done' Enter"
 
 if [[ $DRY -eq 0 && $NO_ATTACH -eq 0 ]]; then
     exec tmux attach -t "$SESSION"
