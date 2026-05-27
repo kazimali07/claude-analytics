@@ -113,7 +113,6 @@ name = "claude-usage"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "httpx" },
     { name = "mcp" },
     { name = "textual" },
     { name = "typer" },
@@ -129,7 +128,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "httpx", specifier = ">=0.27" },
     { name = "mcp", specifier = ">=1.2" },
     { name = "textual", specifier = ">=0.74" },
     { name = "typer", specifier = ">=0.12" },
