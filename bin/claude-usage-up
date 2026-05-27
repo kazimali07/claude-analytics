@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SESSION="${CLAUDE_DASH_SESSION:-claude-dash}"
+DRY=0
+NO_ATTACH=0
+for arg in "$@"; do
+    case "$arg" in
+        --dry-run)   DRY=1 ;;
+        --no-attach) NO_ATTACH=1 ;;
+        *)           ;;
+    esac
+done
+
+run() {
+    if [[ $DRY -eq 1 ]]; then
+        echo "$*"
+    else
+        eval "$*"
+    fi
+}
+
+if [[ $DRY -eq 0 ]] && tmux has-session -t "$SESSION" 2>/dev/null; then
+    if [[ $NO_ATTACH -eq 1 ]]; then
+        exit 0
+    fi
+    exec tmux attach -t "$SESSION"
+fi
+
+run "tmux new-session -d -s $SESSION -n main"
+run "tmux send-keys -t $SESSION:0.0 'while :; do claude-usage tui gauge;    sleep 1; done' Enter"
+run "tmux split-window -t $SESSION:0   -v -p 40"
+run "tmux send-keys -t $SESSION:0.1 'while :; do claude-usage tui sessions; sleep 1; done' Enter"
+run "tmux split-window -t $SESSION:0.1 -h"
+run "tmux send-keys -t $SESSION:0.2 'while :; do claude-usage daemon;       sleep 2; done' Enter"
+run "tmux split-window -t $SESSION:0.1 -h"
+run "tmux send-keys -t $SESSION:0.3 'while :; do claude-usage mcp;          sleep 2; done' Enter"
+
+if [[ $DRY -eq 0 && $NO_ATTACH -eq 0 ]]; then
+    exec tmux attach -t "$SESSION"
+fi
