@@ -32,3 +32,37 @@ def test_extract_usage_skips_assistant_without_usage():
 
 def test_extract_usage_returns_none_on_malformed_json():
     assert extract_usage("{not json", source_file="x", source_offset=0) is None
+
+
+def test_extract_usage_falls_back_to_uuid_when_requestid_missing():
+    line = json.dumps({
+        "type": "assistant",
+        "uuid": "u-fallback",
+        "sessionId": "s",
+        "timestamp": "2026-05-12T08:17:05.000Z",
+        "cwd": "/p",
+        "message": {
+            "model": "claude-opus-4-7",
+            "usage": {
+                "input_tokens": 1, "output_tokens": 2,
+                "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0,
+                "service_tier": "standard",
+                "cache_creation": {"ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 0},
+            },
+        },
+    })
+    row = extract_usage(line, source_file="x", source_offset=0)
+    assert row is not None
+    assert row.request_id == "u-fallback"
+
+
+def test_extract_usage_returns_none_when_no_id_at_all():
+    line = json.dumps({
+        "type": "assistant",
+        "sessionId": "s",
+        "timestamp": "2026-05-12T08:17:05.000Z",
+        "message": {"model": "x", "usage": {"input_tokens": 0, "output_tokens": 0,
+                    "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0,
+                    "cache_creation": {}}},
+    })
+    assert extract_usage(line, source_file="x", source_offset=0) is None

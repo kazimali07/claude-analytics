@@ -34,12 +34,22 @@ def extract_usage(line: str, *, source_file: str, source_offset: int) -> Optiona
     if not usage:
         return None
 
+    # Real Claude Code logs occasionally produce assistant messages with no
+    # requestId (e.g. local checkpoints / synthesized continuations). Fall back
+    # to the per-message uuid so we still de-dup correctly; skip the row only
+    # if neither is present.
+    request_id = obj.get("requestId") or obj.get("uuid")
+    session_id = obj.get("sessionId")
+    timestamp  = obj.get("timestamp")
+    if not (request_id and session_id and timestamp):
+        return None
+
     cache_creation = usage.get("cache_creation") or {}
     return MessageRow(
-        request_id   = obj["requestId"],
-        session_id   = obj["sessionId"],
+        request_id   = request_id,
+        session_id   = session_id,
         project_path = obj.get("cwd", ""),
-        ts_utc       = obj["timestamp"],
+        ts_utc       = timestamp,
         model        = msg.get("model", "unknown"),
         input_tokens    = int(usage.get("input_tokens", 0)),
         output_tokens   = int(usage.get("output_tokens", 0)),

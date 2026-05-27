@@ -118,9 +118,12 @@ def run_daemon(conn: sqlite3.Connection, projects_dir: Path, debounce: float = 0
     log.info("daemon starting; watching %s", projects_dir)
 
     for jsonl in projects_dir.rglob("*.jsonl"):
-        n = process_file(conn, jsonl)
-        if n:
-            log.info("backfill +%d msgs from %s", n, jsonl.name)
+        try:
+            n = process_file(conn, jsonl)
+            if n:
+                log.info("backfill +%d msgs from %s", n, jsonl.name)
+        except Exception as e:
+            log.exception("backfill failed for %s: %s", jsonl, e)
 
     dirty: set[Path] = set()
     lock = threading.Lock()
