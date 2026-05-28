@@ -106,8 +106,7 @@ export async function ingestFile(
     if (byteOffset >= effectiveStart && line.trim()) {
       const row = parseLine(line, filePath, byteOffset);
       if (row) {
-        const toolsLiteral = JSON.stringify(row.tools_used)
-          .replace(/'/g, "''");
+        const toolsLiteral = '[' + row.tools_used.map(t => `'${t.replace(/'/g, "''")}'`).join(', ') + ']';
         await conn.run(`
           INSERT OR IGNORE INTO messages VALUES (
             '${row.request_id.replace(/'/g, "''")}',
