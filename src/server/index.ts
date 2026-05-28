@@ -28,7 +28,7 @@ async function main() {
   await app.register(cors, { origin: true });
 
   // Serve pre-built React app
-  const distPath = join(__dirname, '../../dist');
+  const distPath = join(__dirname, '../dist');
   await app.register(staticPlugin, { root: distPath, prefix: '/' });
 
   // API routes
