@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-SESSION="${CLAUDE_DASH_SESSION:-claude-dash}"
-tmux kill-session -t "$SESSION"

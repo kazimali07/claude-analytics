@@ -1,8 +1,15 @@
-__pycache__/
-*.pyc
-.venv/
-.pytest_cache/
+node_modules/
 dist/
-*.egg-info/
-.superpowers/
+.env
+*.local
+
+# DuckDB
+*.duckdb
+*.duckdb.wal
+
+# OS
+.DS_Store
+
+# Brainstorming / local docs (keep specs local-only)
 docs/
+.superpowers/
