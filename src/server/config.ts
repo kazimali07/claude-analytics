@@ -20,8 +20,13 @@ export function loadConfig(): Config {
     writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULTS, null, 2));
     return { ...DEFAULTS };
   }
-  const saved = JSON.parse(readFileSync(CONFIG_PATH, 'utf8')) as Partial<Config>;
-  // ANTHROPIC_API_KEY env var takes precedence
-  if (process.env.ANTHROPIC_API_KEY) saved.anthropicApiKey = process.env.ANTHROPIC_API_KEY;
-  return { ...DEFAULTS, ...saved };
+  try {
+    const saved = JSON.parse(readFileSync(CONFIG_PATH, 'utf8')) as Partial<Config>;
+    // ANTHROPIC_API_KEY env var takes precedence
+    if (process.env.ANTHROPIC_API_KEY) saved.anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    return { ...DEFAULTS, ...saved };
+  } catch {
+    // Corrupted config — return defaults
+    return { ...DEFAULTS };
+  }
 }

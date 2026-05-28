@@ -42,19 +42,42 @@ CREATE TABLE IF NOT EXISTS project_goals (
   category     VARCHAR,
   updated_at   TIMESTAMPTZ NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS ix_messages_ts       ON messages(ts_utc);
+CREATE INDEX IF NOT EXISTS ix_messages_session  ON messages(session_id);
+CREATE INDEX IF NOT EXISTS ix_messages_project  ON messages(project_name);
+
+CREATE VIEW IF NOT EXISTS sessions AS
+SELECT
+  session_id,
+  project_name,
+  MIN(ts_utc)::VARCHAR                                              AS started_at,
+  MAX(ts_utc)::VARCHAR                                              AS ended_at,
+  COUNT(*)                                                          AS message_count,
+  SUM(input_tokens + output_tokens)                                 AS total_tokens,
+  SUM(cost_usd)                                                     AS total_cost_usd,
+  SUM(cache_read)::DOUBLE / NULLIF(SUM(input_tokens + cache_read), 0) AS cache_hit_rate,
+  mode(model_family)                                                AS primary_model
+FROM messages
+GROUP BY session_id, project_name;
 `;
 
 let _conn: DuckDBConnection | null = null;
 
 export async function getConnection(dbPath: string): Promise<DuckDBConnection> {
   if (_conn) return _conn;
-  const instance = await DuckDBInstance.create(dbPath);
-  _conn = await instance.connect();
-  // Bootstrap schema
-  for (const stmt of SCHEMA.split(';').map(s => s.trim()).filter(Boolean)) {
-    await _conn.run(stmt);
+  try {
+    const instance = await DuckDBInstance.create(dbPath);
+    _conn = await instance.connect();
+    // Bootstrap schema
+    for (const stmt of SCHEMA.split(';').map(s => s.trim()).filter(Boolean)) {
+      await _conn.run(stmt);
+    }
+    return _conn;
+  } catch (err) {
+    _conn = null;
+    throw new Error(`Failed to open DuckDB at ${dbPath}: ${err instanceof Error ? err.message : String(err)}`);
   }
-  return _conn;
 }
 
 export async function query<T = Record<string, unknown>>(
