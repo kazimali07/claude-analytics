@@ -57,7 +57,10 @@ export async function insightRoutes(
     }
 
     const { scope } = req.params as { scope: string };
-    const { stats_hash, stats } = req.body as { stats_hash: string; stats: OverviewStats };
+    const { stats } = req.body as { stats: OverviewStats };
+
+    // Recompute stats_hash server-side to prevent client tampering
+    const stats_hash = createHash('md5').update(JSON.stringify(stats)).digest('hex');
 
     // Lazy import Anthropic SDK to avoid startup cost when key not configured
     const { Anthropic } = await import('@anthropic-ai/sdk');
@@ -86,7 +89,14 @@ Return JSON: { "insights": [{ "title": string, "body": string, "type": "warning"
 
     const text = message.content[0].type === 'text' ? message.content[0].text : '{}';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
-    const insightsJson = jsonMatch ? jsonMatch[0] : '{"insights":[]}';
+    let insightsJson = '{"insights":[]}';
+    try {
+      const candidate = jsonMatch ? jsonMatch[0] : '{"insights":[]}';
+      JSON.parse(candidate); // validate
+      insightsJson = candidate;
+    } catch {
+      // malformed JSON from Claude — keep default empty
+    }
 
     await conn.run(`
       INSERT OR REPLACE INTO insights_cache VALUES (

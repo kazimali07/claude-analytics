@@ -4,7 +4,7 @@ export interface OverviewStats {
   total_cost: number;
   total_calls: number;
   total_sessions: number;
-  cache_hit_rate: number;
+  cache_hit_rate: number | null;
   opus_pct: number;
   project_name?: string;
   last_seen?: string;
@@ -25,14 +25,14 @@ export function generateRuleInsights(stats: OverviewStats): RuleInsight[] {
   }
 
   // Cache hit rate
-  if (stats.cache_hit_rate < 0.50) {
+  if (stats.cache_hit_rate != null && stats.cache_hit_rate < 0.50) {
     insights.push({
       title: 'Low cache efficiency',
       body: `Cache hit rate is ${Math.round(stats.cache_hit_rate * 100)}% ${context}. Consider keeping CLAUDE.md and project context stable across sessions to improve cache reuse.`,
       type: 'warning',
       action: 'Review prompt structure for cache opportunities',
     });
-  } else if (stats.cache_hit_rate > 0.65) {
+  } else if (stats.cache_hit_rate != null && stats.cache_hit_rate > 0.65) {
     insights.push({
       title: 'Good cache efficiency',
       body: `Cache hit rate is ${Math.round(stats.cache_hit_rate * 100)}% ${context}. Your context structure is working well — Claude is reusing prior context effectively.`,
