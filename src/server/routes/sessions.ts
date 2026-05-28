@@ -9,8 +9,8 @@ export async function sessionRoutes(app: FastifyInstance, conn: DuckDBConnection
     };
     const clauses = ['1=1'];
     if (project) clauses.push(`project_name = '${project.replace(/'/g, "''")}'`);
-    if (from) clauses.push(`ts_utc >= '${from}'`);
-    if (to) clauses.push(`ts_utc <= '${to}'`);
+    if (from) clauses.push(`ts_utc >= '${from.replace(/'/g, "''")}'`);
+    if (to) clauses.push(`ts_utc <= '${to.replace(/'/g, "''")}'`);
     const where = `WHERE ${clauses.join(' AND ')}`;
 
     const sessions = await query<{
@@ -31,7 +31,7 @@ export async function sessionRoutes(app: FastifyInstance, conn: DuckDBConnection
       FROM messages ${where}
       GROUP BY session_id, project_name
       ORDER BY started_at DESC
-      LIMIT ${parseInt(limit, 10)}
+      LIMIT ${Math.max(1, Math.min(parseInt(limit, 10) || 20, 1000))}
     `);
 
     return reply.send({ sessions });

@@ -5,8 +5,8 @@ import { query } from '../db.js';
 export async function overviewRoutes(app: FastifyInstance, conn: DuckDBConnection) {
   app.get('/api/overview', async (req, reply) => {
     const { from, to } = req.query as { from?: string; to?: string };
-    const fromClause = from ? `AND ts_utc >= '${from}'` : '';
-    const toClause = to ? `AND ts_utc <= '${to}'` : '';
+    const fromClause = from ? `AND ts_utc >= '${from.replace(/'/g, "''")}'` : '';
+    const toClause = to ? `AND ts_utc <= '${to.replace(/'/g, "''")}'` : '';
     const where = `WHERE 1=1 ${fromClause} ${toClause}`;
 
     const [kpis] = await query<{

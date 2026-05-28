@@ -64,7 +64,7 @@ export async function projectRoutes(app: FastifyInstance, conn: DuckDBConnection
     const toolUsage = await query<{ tool: string; count: number }>(conn, `
       SELECT unnest(tools_used) AS tool, COUNT(*) AS count
       FROM messages ${where}
-      WHERE tools_used IS NOT NULL AND len(tools_used) > 0
+      AND tools_used IS NOT NULL AND len(tools_used) > 0
       GROUP BY tool ORDER BY count DESC
     `);
 
@@ -81,7 +81,7 @@ export async function projectRoutes(app: FastifyInstance, conn: DuckDBConnection
 function buildWhere(from?: string, to?: string, project?: string): string {
   const clauses = ['1=1'];
   if (project) clauses.push(`project_name = '${project.replace(/'/g, "''")}'`);
-  if (from) clauses.push(`ts_utc >= '${from}'`);
-  if (to) clauses.push(`ts_utc <= '${to}'`);
+  if (from) clauses.push(`ts_utc >= '${from.replace(/'/g, "''")}'`);
+  if (to) clauses.push(`ts_utc <= '${to.replace(/'/g, "''")}'`);
   return `WHERE ${clauses.join(' AND ')}`;
 }
