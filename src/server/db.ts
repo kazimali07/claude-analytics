@@ -85,5 +85,13 @@ export async function query<T = Record<string, unknown>>(
   sql: string,
 ): Promise<T[]> {
   const result = await conn.runAndReadAll(sql);
-  return result.getRowObjects() as T[];
+  const rows = result.getRowObjects() as Record<string, unknown>[];
+  // DuckDB returns BigInt for COUNT/INTEGER columns; convert for JSON safety
+  return rows.map(row => {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(row)) {
+      out[k] = typeof v === 'bigint' ? Number(v) : v;
+    }
+    return out as T;
+  });
 }
