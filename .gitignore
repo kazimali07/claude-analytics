@@ -14,3 +14,8 @@ dist-server/
 # Brainstorming / local docs (keep specs local-only)
 docs/
 .superpowers/
+
+# Claude Code + Playwright MCP artifacts
+.claude/
+.playwright-mcp/
+*.png
