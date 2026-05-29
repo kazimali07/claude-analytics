@@ -31,4 +31,6 @@ export const api = {
     get<import('./types.js').InsightsResponse>(`/insights/${encodeURIComponent(scope)}`, params),
   generateInsights: (scope: string, body: unknown) =>
     post<{ insights: import('./types.js').RuleInsight[] }>(`/insights/${encodeURIComponent(scope)}/generate`, body),
+  rescan: () =>
+    post<{ files: number }>('/rescan', {}),
 };

@@ -13,6 +13,7 @@ export default function Project({ name, onBack }: Props) {
   const [insights, setInsights] = useState<InsightsResponse | null>(null);
   const [agentText, setAgentText] = useState<string | null>(null);
   const [agentLoading, setAgentLoading] = useState(false);
+  const [agentError, setAgentError] = useState<string | null>(null);
   const [monoLoading, setMonoLoading] = useState(false);
   const [monoPaths, setMonoPaths] = useState<Parameters<typeof MonetisationPaths>[0]['paths']>([]);
   const [monoHasAi, setMonoHasAi] = useState(false);
@@ -31,6 +32,7 @@ export default function Project({ name, onBack }: Props) {
 
   async function handleAsk(question: string) {
     setAgentLoading(true);
+    setAgentError(null);
     try {
       const scope = `project:${name}:ask`;
       const res = await api.generateInsights(scope, {
@@ -41,6 +43,13 @@ export default function Project({ name, onBack }: Props) {
         model_mix: data?.modelMix,
       });
       setAgentText(res.insights?.[0]?.body ?? 'No response');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setAgentError(
+        msg.includes('403')
+          ? 'No ANTHROPIC_API_KEY configured — set it to enable AI features.'
+          : `Error: ${msg}`
+      );
     } finally {
       setAgentLoading(false);
     }
@@ -122,7 +131,7 @@ export default function Project({ name, onBack }: Props) {
       </div>
 
       <div className="max-w-[1280px] mx-auto px-7 py-6">
-        <AgentPanel projectName={name} assessment={agentText} loading={agentLoading} onAsk={handleAsk} />
+        <AgentPanel projectName={name} assessment={agentText} loading={agentLoading} onAsk={handleAsk} error={agentError} />
 
         <div className="grid grid-cols-[7fr_3fr] gap-4 mb-4">
           <SessionList sessions={data.sessions} maxCalls={maxCalls} />

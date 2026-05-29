@@ -30,14 +30,14 @@ export async function projectRoutes(app: FastifyInstance, conn: DuckDBConnection
     const where = buildWhere(from, to, name);
 
     const [kpis] = await query<{
-      calls: number; cost: number; sessions: number;
+      total_calls: number; total_cost: number; total_sessions: number;
       cache_hit_rate: number; opus_pct: number;
       first_seen: string; last_seen: string;
     }>(conn, `
       SELECT
-        COUNT(*)                   AS calls,
-        ROUND(SUM(cost_usd), 2)   AS cost,
-        COUNT(DISTINCT session_id) AS sessions,
+        COUNT(*)                   AS total_calls,
+        ROUND(SUM(cost_usd), 2)   AS total_cost,
+        COUNT(DISTINCT session_id) AS total_sessions,
         ROUND(SUM(cache_read)::DOUBLE / NULLIF(SUM(input_tokens + cache_read), 0), 3) AS cache_hit_rate,
         ROUND(SUM(CASE WHEN model_family='opus' THEN 1 ELSE 0 END)::DOUBLE / COUNT(*), 3) AS opus_pct,
         MIN(ts_utc)::VARCHAR       AS first_seen,
@@ -62,10 +62,10 @@ export async function projectRoutes(app: FastifyInstance, conn: DuckDBConnection
     `);
 
     const toolUsage = await query<{ tool: string; count: number }>(conn, `
-      SELECT unnest(tools_used) AS tool, COUNT(*) AS count
-      FROM messages ${where}
-      AND tools_used IS NOT NULL AND len(tools_used) > 0
-      GROUP BY tool ORDER BY count DESC
+      SELECT t.tool, COUNT(*) AS count
+      FROM messages, unnest(tools_used) AS t(tool)
+      ${where} AND tools_used IS NOT NULL AND len(tools_used) > 0
+      GROUP BY t.tool ORDER BY count DESC
     `);
 
     const modelMix = await query<{ model_family: string; count: number }>(conn, `

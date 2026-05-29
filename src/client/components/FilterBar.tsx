@@ -1,5 +1,5 @@
 
-
+import { useState } from 'react';
 
 export interface FilterState {
   from: string;
@@ -36,10 +36,12 @@ function prevMonth(isoDate: string): { from: string; to: string } {
 
 export default function FilterBar({ value, onChange }: Props) {
   const today = new Date().toISOString().slice(0, 10);
+  const [activePreset, setActivePreset] = useState<string | null>(null);
 
-  function applyPreset(days: number) {
-    const from = days === 0 ? '2020-01-01' : daysAgo(days);
+  function applyPreset(days: number, label: string) {
+    const from = days === 0 ? '2023-01-01' : daysAgo(days);
     const prev = prevMonth(from);
+    setActivePreset(label);
     onChange({ ...value, from, to: today, compareFrom: prev.from, compareTo: prev.to });
   }
 
@@ -50,8 +52,8 @@ export default function FilterBar({ value, onChange }: Props) {
         {PRESETS.map(p => (
           <button
             key={p.label}
-            onClick={() => applyPreset(p.days)}
-            className="px-3 py-1 rounded-md border text-xs border-[#3d4268] bg-[#2d3148] text-[#94a3b8] hover:bg-[#3d4268]"
+            onClick={() => applyPreset(p.days, p.label)}
+            className={`px-3 py-1 rounded-md border text-xs ${activePreset === p.label ? 'bg-[#4c1d95] border-[#7c3aed] text-[#c4b5fd]' : 'border-[#3d4268] bg-[#2d3148] text-[#94a3b8] hover:bg-[#3d4268]'}`}
           >
             {p.label}
           </button>

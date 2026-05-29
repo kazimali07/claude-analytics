@@ -37,6 +37,11 @@ async function main() {
   await sessionRoutes(app, conn);
   await insightRoutes(app, conn, config.anthropicApiKey);
 
+  app.post('/api/rescan', async (_req, reply) => {
+    const { files } = await ingestAll(conn, config.projectsDir);
+    return reply.send({ files });
+  });
+
   // SPA fallback
   app.setNotFoundHandler((_req, reply) => {
     reply.sendFile('index.html');

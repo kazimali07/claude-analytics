@@ -30,10 +30,10 @@ function KpiCard({ label, value, prev, delta, deltaGood }: KpiCardProps) {
   );
 }
 
-function pct(v: number) { return `${Math.round(v * 100)}%`; }
-function cost(v: number) { return `$${v.toFixed(2)}`; }
-function delta(curr: number, prev: number, _higherIsBad = false): { text: string; good: boolean } {
-  if (prev === 0) return { text: '—', good: true };
+function pct(v: number | null) { return v == null ? '—' : `${Math.round(v * 100)}%`; }
+function cost(v: number | null) { return v == null ? '—' : `$${v.toFixed(2)}`; }
+function delta(curr: number | null, prev: number | null, _higherIsBad = false): { text: string; good: boolean } {
+  if (curr == null || prev == null || prev === 0) return { text: '—', good: true };
   const d = (curr - prev) / prev;
   const text = `${d >= 0 ? '+' : ''}${Math.round(d * 100)}%`;
   const good = _higherIsBad ? d < 0 : d > 0;

@@ -32,6 +32,7 @@ export default function Dashboard({ onSelectProject }: Props) {
   const [modelMix, setModelMix] = useState<ModelMixItem[]>([]);
   const [insights, setInsights] = useState<InsightsResponse | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const params = { from: filter.from, to: filter.to };
@@ -63,10 +64,18 @@ export default function Dashboard({ onSelectProject }: Props) {
 
   async function handleGenerateInsights() {
     setInsightsLoading(true);
+    setInsightsError(null);
     try {
       await api.generateInsights('overview', { stats: kpis, stats_hash: insights?.stats_hash });
       const fresh = await api.insights('overview', { from: filter.from, to: filter.to });
       setInsights(fresh);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setInsightsError(
+        msg.includes('403')
+          ? 'No ANTHROPIC_API_KEY configured. Set it in your environment to enable AI insights.'
+          : `Failed to generate insights: ${msg}`
+      );
     } finally {
       setInsightsLoading(false);
     }
@@ -77,7 +86,7 @@ export default function Dashboard({ onSelectProject }: Props) {
       {/* Header */}
       <div className="bg-[#1a1d27] border-b border-[#2d3148] px-7 py-3.5 flex items-center justify-between">
         <div className="text-base font-semibold text-[#a78bfa]">⬡ Claude Analytics</div>
-        <button onClick={load} className="text-xs bg-[#2d3148] border border-[#3d4268] text-[#94a3b8] px-3.5 py-1.5 rounded-lg hover:bg-[#3d4268]">
+        <button onClick={async () => { await api.rescan(); void load(); }} className="text-xs bg-[#2d3148] border border-[#3d4268] text-[#94a3b8] px-3.5 py-1.5 rounded-lg hover:bg-[#3d4268]">
           ↻ Rescan
         </button>
       </div>
@@ -96,7 +105,7 @@ export default function Dashboard({ onSelectProject }: Props) {
 
         <div className="grid grid-cols-[1fr_1fr] gap-4">
           {kpis && <EfficiencyPanel current={kpis} previous={compareKpis ?? undefined} />}
-          <InsightsPanel data={insights} onGenerate={handleGenerateInsights} loading={insightsLoading} />
+          <InsightsPanel data={insights} onGenerate={handleGenerateInsights} loading={insightsLoading} error={insightsError} />
         </div>
       </div>
     </div>

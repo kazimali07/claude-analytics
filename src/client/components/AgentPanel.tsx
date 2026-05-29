@@ -3,6 +3,7 @@ interface Props {
   assessment: string | null;
   loading: boolean;
   onAsk: (question: string) => void;
+  error?: string | null;
 }
 
 const CTAS = [
@@ -12,7 +13,7 @@ const CTAS = [
   'Estimate App Store readiness',
 ];
 
-export default function AgentPanel({ projectName, assessment, loading, onAsk }: Props) {
+export default function AgentPanel({ projectName, assessment, loading, onAsk, error }: Props) {
   return (
     <div className="bg-[#13151f] border border-[#2d3148] rounded-xl overflow-hidden mb-4">
       <div className="bg-[#1e1a2e] px-[1.125rem] py-3.5 flex items-center gap-2.5 border-b border-[#2d3148]">
@@ -26,10 +27,13 @@ export default function AgentPanel({ projectName, assessment, loading, onAsk }: 
       <div className="px-[1.125rem] py-4 border-b border-[#1e2235]">
         <div className="text-[10px] text-[#475569] uppercase tracking-widest mb-2">Assessment</div>
         {loading && <div className="text-sm text-[#64748b] italic">Analysing...</div>}
-        {!loading && assessment && (
+        {!loading && error && (
+          <div className="text-xs text-[#f87171]">{error}</div>
+        )}
+        {!loading && !error && assessment && (
           <div className="text-[13px] text-[#cbd5e1] leading-relaxed" dangerouslySetInnerHTML={{ __html: assessment }} />
         )}
-        {!loading && !assessment && (
+        {!loading && !error && !assessment && (
           <div className="text-xs text-[#475569]">Click a question below to generate an AI assessment.</div>
         )}
       </div>
